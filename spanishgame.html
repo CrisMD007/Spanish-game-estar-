@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Juego del verbo estar</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 30px;
+      transition: background-color 0.5s;
+      background-color: #f0f8ff;
+    }
+    .question {
+      font-size: 1.4em;
+      margin-bottom: 20px;
+    }
+    .options button, .options input {
+      display: block;
+      margin: 10px auto;
+      padding: 10px 20px;
+      font-size: 1em;
+      border-radius: 8px;
+    }
+    .options button {
+      cursor: pointer;
+      border: none;
+      background-color: #87cefa;
+    }
+    .feedback {
+      margin-top: 15px;
+      font-size: 1.2em;
+      font-weight: bold;
+    }
+    .score {
+      font-size: 1.2em;
+      margin-top: 30px;
+    }
+    .popup {
+      background-color: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      position: absolute;
+      top: 30%;
+      left: 50%;
+      transform: translateX(-50%);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      display: none;
+    }
+    .popup button {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-size: 1em;
+      cursor: pointer;
+      border: none;
+      border-radius: 8px;
+      background-color: #32cd32;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+
+<h1>🎮 Juego: ¿Cómo se conjuga el verbo <em>estar</em>?</h1>
+<div class="question" id="question"></div>
+<div class="options" id="options"></div>
+<div class="feedback" id="feedback"></div>
+<div class="score" id="score"></div>
+
+<!-- Ventana emergente para el nivel -->
+<div class="popup" id="level-popup">
+  <h2 id="level-text">Nivel 1</h2>
+  <button onclick="empezarNivel()">Empezar</button>
+</div>
+
+<script>
+  const preguntas = [
+    // Nivel 1 - Elección de terminaciones
+    { nivel: 1, pregunta: "Yo est___ en casa.", opciones: ["oy", "á", "án"], correcta: "oy" },
+    { nivel: 1, pregunta: "Tú est____ muy feliz.", opciones: ["oy", "ás", "a"], correcta: "ás" },
+    { nivel: 1, pregunta: "Él est____ en la tienda.", opciones: ["á", "oy", "án"], correcta: "á" },
+
+    // Nivel 2 - Entrada de texto
+    { nivel: 2, pregunta: "Yo ____ hambriento.", correcta: "estoy", tipo: "texto" },
+    { nivel: 2, pregunta: "Tú ____ cansado.", correcta: "estás", tipo: "texto" },
+    { nivel: 2, pregunta: "Él ____ enfermo.", correcta: "está", tipo: "texto" },
+    { nivel: 2, pregunta: "Nosotros ____ listos.", correcta: "estamos", tipo: "texto" },
+    { nivel: 2, pregunta: "Ellos ____ en casa.", correcta: "están", tipo: "texto" },
+
+    // Nivel 3 - Corrección de frases
+    { nivel: 3, pregunta: "Tú está cansado.", opciones: ["Correcto👍🏻", "Incorrecto👎🏻"], correcta: "Incorrecto👎🏻" },
+    { nivel: 3, pregunta: "Nosotros estamos en la fiesta.", opciones: ["Correcto👍🏻", "Incorrecto👎🏻"], correcta: "Correcto👍🏻" },
+    { nivel: 3, pregunta: "Ella está contenta.", opciones: ["Correcto👍🏻", "Incorrecto👎🏻"], correcta: "Correcto👍🏻" },
+    { nivel: 3, pregunta: "Él estáis en la tienda.", opciones: ["Correcto👍🏻", "Incorrecto👎🏻"], correcta: "Incorrecto👎🏻" },
+    { nivel: 3, pregunta: "Vosotros estoy cansados.", opciones: ["Correcto👍🏻", "Incorrecto👎🏻"], correcta: "Incorrecto👎🏻" },
+
+    // Nivel 4 - Preguntas más avanzadas
+    { nivel: 4, pregunta: "¿Dónde está el perro?", opciones: ["Está en la cama 🛏️", "Está feliz 😀", "Está dormido 😴"], correcta: "Está en la cama 🛏️" },
+    { nivel: 4, pregunta: "¿Qué está en la mesa?", opciones: ["El libro está en la mesa 📚", "Está corriendo 🏃", "Está en la escuela 🏫"], correcta: "El libro está en la mesa 📚" },
+    { nivel: 4, pregunta: "¿Cómo está Ana?", opciones: ["Está cansada 😴", "Está en la playa 🏖️", "Está en el cine 🎬"], correcta: "Está cansada 😴" },
+    { nivel: 4, pregunta: "¿Cuándo está él en casa?", opciones: ["Está en la escuela 🏫", "Está en casa por la tarde 🌇", "Está enojado 😡"], correcta: "Está en casa por la tarde 🌇" },
+    { nivel: 4, pregunta: "¿Quién está triste?", opciones: ["Pedro está triste 👨🏻", "Está en el parque 🌳", "Está estudiando 📚"], correcta: "Pedro está triste 👨🏻" },
+    { nivel: 4, pregunta: "¿Por qué está ella preocupada?", opciones: ["Porque tiene un examen 📄😰", "Porque está en la silla 🪑", "Porque está feliz 😀"], correcta: "Porque tiene un examen 📄😰" }
+  ];
+
+  let indice = 0;
+  let puntos = 0;
+  let respuestasCorrectas = 0;
+  let respuestasIncorrectas = 0;
+  let nivelActual = preguntas[0].nivel;
+
+  function cambiarColorFondo(nivel) {
+    const colores = {
+      1: "#b0e57c", // Verde pastel
+      2: "#fff9c4", // Amarillo pastel
+      3: "#ffcc80", // Naranja pastel
+      4: "#ffcdd2"  // Rojo pastel
+    };
+    document.body.style.backgroundColor = colores[nivel] || "#f0f8ff";
+  }
+
+  function mostrarPregunta() {
+    const pregunta = preguntas[indice];
+    cambiarColorFondo(pregunta.nivel);
+    document.getElementById("question").innerText = pregunta.pregunta;
+    document.getElementById("options").innerHTML = "";
+    document.getElementById("feedback").innerText = "";
+
+    if (pregunta.tipo === "texto") {
+      const input = document.createElement("input");
+      input.type = "text";
+      input.id = "respuestaTexto";
+      input.placeholder = "Escribe tu respuesta aquí";
+      input.style.padding = "10px";
+      input.style.fontSize = "1em";
+      input.style.borderRadius = "8px";
+      input.style.border = "1px solid #ccc";
+
+      const boton = document.createElement("button");
+      boton.textContent = "Enviar";
+      boton.onclick = () => {
+        const valorUsuario = document.getElementById("respuestaTexto").value.trim().toLowerCase();
+        verificarRespuesta(valorUsuario);
+      };
+
+      document.getElementById("options").appendChild(input);
+      document.getElementById("options").appendChild(boton);
+    } else {
+      pregunta.opciones.forEach(opcion => {
+        const btn = document.createElement("button");
+        btn.textContent = opcion;
+        btn.onclick = () => verificarRespuesta(opcion);
+        document.getElementById("options").appendChild(btn);
+      });
+    }
+  }
+
+  function verificarRespuesta(respuesta) {
+    const actual = preguntas[indice];
+
+    const esCorrecta = actual.tipo === "texto"
+      ? respuesta === actual.correcta.toLowerCase()
+      : respuesta === actual.correcta;
+
+    if (esCorrecta) {
+      document.getElementById("feedback").innerText = "✅ ¡Correcto!";
+      puntos++;
+      respuestasCorrectas++;
+      setTimeout(() => siguientePregunta(), 1000);
+    } else {
+      document.getElementById("feedback").innerText = "❌ Intenta otra vez.";
+      respuestasIncorrectas++;
+    }
+  }
+
+  function siguientePregunta() {
+    indice++;
+    if (indice >= preguntas.length) {
+      mostrarResultado();
+      return;
+    }
+
+    const nuevoNivel = preguntas[indice].nivel;
+    if (nuevoNivel !== nivelActual) {
+      nivelActual = nuevoNivel;
+      mostrarPopupNivel(nivelActual);
+    } else {
+      mostrarPregunta();
+    }
+  }
+
+  function mostrarResultado() {
+    const total = respuestasCorrectas + respuestasIncorrectas;
+    const porcentaje = total > 0 ? (respuestasCorrectas / total) * 100 : 0;
+    document.getElementById("question").innerText = "Juego terminado 🎉";
+    document.getElementById("options").innerHTML = "";
+    document.getElementById("feedback").innerText = "";
+    document.getElementById("score").innerText =
+      `Puntaje final: ${puntos} / ${preguntas.length} (${porcentaje.toFixed(2)}%) - Nota: ${Math.round(porcentaje)}/100`;
+  }
+
+  function empezarNivel() {
+    document.getElementById("level-popup").style.display = "none";
+    mostrarPregunta();
+  }
+
+  function mostrarPopupNivel(nivel) {
+    document.getElementById("level-text").innerText = `Nivel ${nivel}`;
+    document.getElementById("level-popup").style.display = "block";
+  }
+
+  // Comenzar mostrando el primer popup
+  mostrarPopupNivel(nivelActual);
+</script>
+
+</body>
+</html>
